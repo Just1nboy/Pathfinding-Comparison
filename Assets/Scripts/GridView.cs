@@ -12,6 +12,7 @@ public class GridView : MonoBehaviour
     [SerializeField] private CameraController cameraController;
 
     private GridMap gridMap;
+    public GridMap GetMap() => gridMap;
 
     private void Start()
     {
@@ -43,4 +44,17 @@ public class GridView : MonoBehaviour
 
         cameraController?.FocusOnGrid(gridMap.Width, gridMap.Height);
     }
+
+    public void ResetVisuals()
+    {
+       foreach (var cell in gridMap.AllCells)
+      {
+          if (!cell.IsBlocked && !cell.IsStart && !cell.IsEnd)
+          {
+              cell.Visual.ShowBlocked(false);  // white
+          }
+       }
+    }
+
+
 }

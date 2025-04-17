@@ -10,6 +10,9 @@ public class GridCell
 
     private CellVisual visual;
 
+    public CellVisual Visual => visual;
+
+
     public GridCell(int x, int y)
     {
         X = x;

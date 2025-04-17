@@ -24,4 +24,16 @@ public class CellVisual : MonoBehaviour
     {
         sr.color = Color.red;
     }
+
+    public void ShowVisited()
+    {
+        if (sr.color == Color.white)
+            sr.color = Color.yellow;
+    }
+
+    public void ShowPath()
+    {
+       sr.color = Color.cyan;
+    }
+
 }
