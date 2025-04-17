@@ -1,47 +1,31 @@
+using UnityEngine;
 using System.Collections.Generic;
 
-public class CellNeighbourHelper
+public static class CellNeighbourHelper
 {
-    private GridCell _cell;
-    private GridMap _map;
-
-    public CellNeighbourHelper(GridCell cell, GridMap map)
+    private static readonly Vector2Int[] Directions = new Vector2Int[]
     {
-        _cell = cell;
-        _map = map;
-    }
+        new Vector2Int( 0,  1),
+        new Vector2Int( 1,  0),
+        new Vector2Int( 0, -1),
+        new Vector2Int(-1,  0),
+    };
 
-    public GridCell[] GetNeighbours()
+    public static List<GridCell> GetNeighbours(GridCell[,] grid, int x, int y)
     {
-        List<GridCell> neighbours = new List<GridCell>();
-        int[,] directions = new int[,]
-        {
-            { 0, 1 },  // Up
-            { 1, 0 },  // Right
-            { 0, -1 }, // Down
-            { -1, 0 }  // Left
-        };
+        var list = new List<GridCell>();
+        int w = grid.GetLength(0), h = grid.GetLength(1);
 
-        for (int i = 0; i < directions.GetLength(0); i++)
+        foreach (var d in Directions)
         {
-            int newX = _cell.X + directions[i, 0];
-            int newY = _cell.Y + directions[i, 1];
-
-            if (IsValidPosition(newX, newY))
+            int nx = x + d.x, ny = y + d.y;
+            if (nx >= 0 && ny >= 0 && nx < w && ny < h)
             {
-                GridCell neighbour = _map.AllCells[newX, newY];
-                if (!neighbour.IsBlocked)
-                {
-                    neighbours.Add(neighbour);
-                }
+                var c = grid[nx, ny];
+                if (!c.IsBlocked)
+                    list.Add(c);
             }
         }
-
-        return neighbours.ToArray();
-    }
-
-    private bool IsValidPosition(int x, int y)
-    {
-        return x >= 0 && y >= 0 && x < _map.Width && y < _map.Height;
+        return list;
     }
 }

@@ -3,35 +3,25 @@ using UnityEngine;
 [RequireComponent(typeof(SpriteRenderer))]
 public class CellVisual : MonoBehaviour
 {
-    private SpriteRenderer _renderer;
+    private SpriteRenderer sr;
 
     private void Awake()
     {
-        _renderer = GetComponent<SpriteRenderer>();
+        sr = GetComponent<SpriteRenderer>();
     }
 
-    public void UpdateVisual(bool isBlocked)
+    public void ShowBlocked(bool blocked)
     {
-        _renderer.color = isBlocked ? Color.black : Color.white;
+        sr.color = blocked ? Color.black : Color.white;
     }
 
-    public void SetAsStart()
+    public void ShowStart()
     {
-        _renderer.color = Color.green;
+        sr.color = Color.green;
     }
 
-    public void SetAsEnd()
+    public void ShowEnd()
     {
-        _renderer.color = Color.red;
-    }
-
-    public void SetAsPath()
-    {
-        _renderer.color = Color.cyan;
-    }
-
-    public void SetAsVisited()
-    {
-        _renderer.color = Color.yellow;
+        sr.color = Color.red;
     }
 }

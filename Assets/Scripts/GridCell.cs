@@ -1,38 +1,45 @@
-using UnityEngine;
+using System.Collections.Generic;
 
 public class GridCell
 {
-    public int X { get; private set; }
-    public int Y { get; private set; }
+    public int X { get; }
+    public int Y { get; }
     public bool IsBlocked { get; private set; }
-    public GridMap ParentMap { get; private set; }
-    public CellVisual Visual { get; private set; }
+    public bool IsStart   { get; private set; }
+    public bool IsEnd     { get; private set; }
 
-    private CellNeighbourHelper _neighbourHelper;
+    private CellVisual visual;
 
-    public GridCell(GridMap map, int x, int y)
+    public GridCell(int x, int y)
     {
-        ParentMap = map;
         X = x;
         Y = y;
         IsBlocked = false;
-        _neighbourHelper = new CellNeighbourHelper(this, map);
-    }
-
-    public void SetVisual(CellVisual visual)
-    {
-        Visual = visual;
-        Visual.UpdateVisual(IsBlocked);
+        IsStart   = false;
+        IsEnd     = false;
     }
 
     public void SetBlocked(bool blocked)
     {
         IsBlocked = blocked;
-        Visual?.UpdateVisual(IsBlocked);
+        visual?.ShowBlocked(blocked);
     }
 
-    public GridCell[] GetNeighbours()
+    public void SetVisual(CellVisual v)
     {
-        return _neighbourHelper.GetNeighbours();
+        visual = v;
+        visual.ShowBlocked(IsBlocked);
+    }
+
+    public void MarkAsStart()
+    {
+        IsStart = true;
+        visual.ShowStart();
+    }
+
+    public void MarkAsEnd()
+    {
+        IsEnd = true;
+        visual.ShowEnd();
     }
 }
