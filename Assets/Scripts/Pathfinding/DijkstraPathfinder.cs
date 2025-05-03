@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class DijkstraPathfinder : IPathfinder
 {
+    public System.Action<PathfindingStats> OnComplete;
+
     public async void FindPath(GridCell start, GridCell end, GridCell[,] grid)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
@@ -36,6 +38,7 @@ public class DijkstraPathfinder : IPathfinder
                 stopwatch.Stop();
                 var stats = await VisualizePath(current, allNodes, stopwatch.Elapsed.TotalSeconds, visited);
                 Debug.Log($"Dijkstra Stats: {stats}");
+                OnComplete?.Invoke(stats);
                 return;
             }
 
@@ -63,7 +66,8 @@ public class DijkstraPathfinder : IPathfinder
         }
 
         stopwatch.Stop();
-        Debug.LogWarning("Dijkstra failed: no path found.");
+        Debug.LogWarning("Dijkstra failed.");
+        OnComplete?.Invoke(new PathfindingStats { TimeSeconds = (float)stopwatch.Elapsed.TotalSeconds });
     }
 
     private async System.Threading.Tasks.Task<PathfindingStats> VisualizePath(

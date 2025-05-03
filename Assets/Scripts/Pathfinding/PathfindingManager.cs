@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 
 public class PathfindingManager : MonoBehaviour
@@ -15,25 +17,115 @@ public class PathfindingManager : MonoBehaviour
         dijkstra = new DijkstraPathfinder();
     }
 
-    public void RunAStar()
+    // Single-run methods
+    public void RunAStar() => RunOnce(aStar);
+    public void RunGreedy() => RunOnce(greedy);
+    public void RunDijkstra() => RunOnce(dijkstra);
+
+    private void RunOnce(IPathfinder algo)
     {
         var map = gridView.GetMap();
         gridView.ResetVisuals();
-        aStar.FindPath(map.StartCell, map.EndCell, map.AllCells);
+        algo.FindPath(map.StartCell, map.EndCell, map.AllCells);
     }
 
-    public void RunGreedy()
+    // 100-run benchmarks per algo
+    public async void RunAStarBenchmark() => await RunBenchmark(aStar, "astar_benchmark.csv");
+    public async void RunGreedyBenchmark() => await RunBenchmark(greedy, "greedy_benchmark.csv");
+    public async void RunDijkstraBenchmark() => await RunBenchmark(dijkstra, "dijkstra_benchmark.csv");
+
+    private async Task RunBenchmark(IPathfinder algo, string fileName)
     {
-        var map = gridView.GetMap();
-        gridView.ResetVisuals();
-        greedy.FindPath(map.StartCell, map.EndCell, map.AllCells);
+        Debug.Log($"Starting benchmark: {fileName}");
+        var statsList = new List<PathfindingStats>();
+
+        for (int i = 0; i < 100; i++)
+        {
+            gridView.GenerateMaze();
+            await Task.Delay(100); // allow maze to regenerate
+
+            var map = gridView.GetMap();
+            var runner = new BenchmarkPathfinder(algo);
+            var stats = await runner.RunAsync(map.StartCell, map.EndCell, map.AllCells);
+            statsList.Add(stats);
+        }
+
+        // Convert to CSV rows
+        var rows = new List<string[]>();
+        rows.Add(new[] { "Run", "TimeSeconds", "VisitedCells", "PathLength" });
+        for (int i = 0; i < statsList.Count; i++)
+        {
+            var d = statsList[i];
+            rows.Add(new[]
+            {
+                (i + 1).ToString(),
+                d.TimeSeconds.ToString("F4"),
+                d.VisitedCells.ToString(),
+                d.PathLength.ToString()
+            });
+        }
+
+        CsvExporter.Export(fileName, rows);
+        Debug.Log($"Finished benchmark: {fileName}");
     }
 
-    public void RunDijkstra()
+    // Combined 100-maze × 3-algo benchmark
+    public async void RunFullBenchmark()
     {
-        var map = gridView.GetMap();
-        gridView.ResetVisuals();
-        dijkstra.FindPath(map.StartCell, map.EndCell, map.AllCells);
+        Debug.Log("Starting full benchmark (100 mazes × 3 algos)");
+
+        var allRows = new List<string[]>();
+        allRows.Add(new[] { "Run", "Algorithm", "TimeSeconds", "VisitedCells", "PathLength" });
+
+        for (int i = 0; i < 100; i++)
+        {
+            // 1) Generate a fresh maze
+            gridView.GenerateMaze();
+            await Task.Delay(100); // wait for the grid to rebuild
+
+            var map = gridView.GetMap();
+
+            // 2) Run A*
+            gridView.ResetVisuals();
+            var aStats = await new BenchmarkPathfinder(new AStarPathfinder())
+                                .RunAsync(map.StartCell, map.EndCell, map.AllCells);
+            allRows.Add(new[]
+            {
+            (i + 1).ToString(), "AStar",
+            aStats.TimeSeconds.ToString("F4"),
+            aStats.VisitedCells.ToString(),
+            aStats.PathLength.ToString()
+        });
+
+            // 3) Run Greedy
+            gridView.ResetVisuals();
+            var gStats = await new BenchmarkPathfinder(new GreedyPathfinder())
+                                .RunAsync(map.StartCell, map.EndCell, map.AllCells);
+            allRows.Add(new[]
+            {
+            (i + 1).ToString(), "Greedy",
+            gStats.TimeSeconds.ToString("F4"),
+            gStats.VisitedCells.ToString(),
+            gStats.PathLength.ToString()
+        });
+
+            // 4) Run Dijkstra
+            gridView.ResetVisuals();
+            var dStats = await new BenchmarkPathfinder(new DijkstraPathfinder())
+                                .RunAsync(map.StartCell, map.EndCell, map.AllCells);
+            allRows.Add(new[]
+            {
+            (i + 1).ToString(), "Dijkstra",
+            dStats.TimeSeconds.ToString("F4"),
+            dStats.VisitedCells.ToString(),
+            dStats.PathLength.ToString()
+        });
+
+            Debug.Log($"Completed maze {i + 1}/100");
+        }
+
+        CsvExporter.Export("combined_benchmark.csv", allRows);
+        Debug.Log("Full benchmark complete.");
     }
 
 }

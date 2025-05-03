@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class AStarPathfinder : IPathfinder
 {
+    public System.Action<PathfindingStats> OnComplete;
+
     public async void FindPath(GridCell start, GridCell end, GridCell[,] grid)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
@@ -36,7 +38,8 @@ public class AStarPathfinder : IPathfinder
             {
                 stopwatch.Stop();
                 var stats = await VisualizePath(current, allNodes, stopwatch.Elapsed.TotalSeconds, visited);
-                Debug.Log($"🔵 A* Stats: {stats}");
+                Debug.Log($"A* Stats: {stats}");
+                OnComplete?.Invoke(stats);
                 return;
             }
 
@@ -65,12 +68,12 @@ public class AStarPathfinder : IPathfinder
         }
 
         stopwatch.Stop();
-        Debug.LogWarning("A* failed: no path found.");
+        Debug.LogWarning("A* failed.");
+        OnComplete?.Invoke(new PathfindingStats { TimeSeconds = (float)stopwatch.Elapsed.TotalSeconds });
     }
 
-
     private async System.Threading.Tasks.Task<PathfindingStats> VisualizePath(
-    PathNodeData endNode, Dictionary<GridCell, PathNodeData> allNodes, double timeElapsed, int visited)
+        PathNodeData endNode, Dictionary<GridCell, PathNodeData> allNodes, double timeElapsed, int visited)
     {
         var path = new List<GridCell>();
         var current = endNode;
@@ -96,7 +99,6 @@ public class AStarPathfinder : IPathfinder
             PathLength = path.Count
         };
     }
-
 
     private int Heuristic(GridCell a, GridCell b)
     {
