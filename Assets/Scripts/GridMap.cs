@@ -11,22 +11,20 @@ public class GridMap
     public GridCell StartCell { get; private set; }
     public GridCell EndCell { get; private set; }
 
-    private float blockRatio; // no longer used, but kept for signature
-
+    // blockRatio is no longer used by this generator, but kept to match constructor signature
     public GridMap(int width, int height, float blockRatio)
     {
         Width = width;
         Height = height;
-        this.blockRatio = blockRatio;
 
-        GenerateGrid();
-        GenerateMaze();            // <-- replace random blocks
-        PickRandomStartEnd();      // <-- picks start/end half-maze apart
+        InitializeGrid();
+        GenerateMaze();
+        PickRandomStartEnd();
 
         OnMapGenerated?.Invoke();
     }
 
-    private void GenerateGrid()
+    private void InitializeGrid()
     {
         AllCells = new GridCell[Width, Height];
         for (int x = 0; x < Width; x++)
@@ -36,66 +34,93 @@ public class GridMap
 
     private void GenerateMaze()
     {
-        // Start with every cell open
-        for (int x = 0; x < Width; x++)
-            for (int y = 0; y < Height; y++)
+        // 1. Fill entire grid with walls
+        foreach (var cell in AllCells)
+            cell.SetBlocked(true);
+
+        // 2. Standard recursive backtracking (DFS) maze generation
+        var stack = new Stack<GridCell>();
+        int sx = UnityEngine.Random.Range(0, Width / 2) * 2;
+        int sy = UnityEngine.Random.Range(0, Height / 2) * 2;
+        var start = AllCells[sx, sy];
+        start.SetBlocked(false);
+        stack.Push(start);
+
+        var directions = new (int dx, int dy)[]
+        {
+        ( 0,  2),
+        ( 2,  0),
+        ( 0, -2),
+        (-2,  0)
+        };
+
+        while (stack.Count > 0)
+        {
+            var current = stack.Peek();
+            var neighbors = new List<GridCell>();
+
+            foreach (var (dx, dy) in directions)
+            {
+                int nx = current.X + dx;
+                int ny = current.Y + dy;
+
+                if (nx >= 0 && ny >= 0 && nx < Width && ny < Height)
+                {
+                    var neighbor = AllCells[nx, ny];
+                    if (neighbor.IsBlocked)
+                        neighbors.Add(neighbor);
+                }
+            }
+
+            if (neighbors.Count > 0)
+            {
+                var next = neighbors[UnityEngine.Random.Range(0, neighbors.Count)];
+                int wallX = (current.X + next.X) / 2;
+                int wallY = (current.Y + next.Y) / 2;
+
+                AllCells[wallX, wallY].SetBlocked(false);
+                next.SetBlocked(false);
+                stack.Push(next);
+            }
+            else
+            {
+                stack.Pop();
+            }
+        }
+
+        // 3. Add extra openings (optional loops)
+        int extraOpenings = Mathf.FloorToInt((Width + Height) * 0.75f); // tweakable
+        int attempts = 0;
+
+        while (extraOpenings > 0 && attempts < 500)
+        {
+            int x = UnityEngine.Random.Range(1, Width - 1);
+            int y = UnityEngine.Random.Range(1, Height - 1);
+
+            // Must be a wall between two open cells (vertical or horizontal only)
+            if (!AllCells[x, y].IsBlocked)
+            {
+                attempts++;
+                continue;
+            }
+
+            bool vertical = AllCells[x - 1, y].IsBlocked == false && AllCells[x + 1, y].IsBlocked == false;
+            bool horizontal = AllCells[x, y - 1].IsBlocked == false && AllCells[x, y + 1].IsBlocked == false;
+
+            if (vertical || horizontal)
+            {
                 AllCells[x, y].SetBlocked(false);
-
-        // Recursively divide the area into a perfect maze
-        Divide(0, 0, Width, Height);
-    }
-
-    private void Divide(int x, int y, int width, int height)
-    {
-        // Stop if the region is too small
-        if (width < 2 || height < 2)
-            return;
-
-        bool horizontal = width < height;
-
-        if (horizontal)
-        {
-            // horizontal division
-            int divideY = y + UnityEngine.Random.Range(1, height); // row to place wall
-            int passageX = x + UnityEngine.Random.Range(0, width);
-
-            // draw the wall
-            for (int ix = x; ix < x + width; ix++)
-            {
-                if (ix == passageX) continue;
-                AllCells[ix, divideY].SetBlocked(true);
+                extraOpenings--;
             }
 
-            // recurse above and below
-            int topHeight = divideY - y;
-            int bottomHeight = height - topHeight;
-            Divide(x, y, width, topHeight);
-            Divide(x, divideY + 1, width, bottomHeight - 1);
-        }
-        else
-        {
-            // vertical division
-            int divideX = x + UnityEngine.Random.Range(1, width); // column to place wall
-            int passageY = y + UnityEngine.Random.Range(0, height);
-
-            // draw the wall
-            for (int iy = y; iy < y + height; iy++)
-            {
-                if (iy == passageY) continue;
-                AllCells[divideX, iy].SetBlocked(true);
-            }
-
-            // recurse left and right
-            int leftWidth = divideX - x;
-            int rightWidth = width - leftWidth;
-            Divide(x, y, leftWidth, height);
-            Divide(divideX + 1, y, rightWidth - 1, height);
+            attempts++;
         }
     }
+
 
     private void PickRandomStartEnd()
     {
-        // 1) Place Start in any non-blocked cell
+        // 1) Pick Start on any open cell
         while (true)
         {
             int sx = UnityEngine.Random.Range(0, Width);
@@ -108,24 +133,17 @@ public class GridMap
             }
         }
 
-        // 2) Ensure End is at least half the maximum Manhattan distance away
-        int maxManhattan = (Width - 1) + (Height - 1);
-        int minDistance = maxManhattan / 2;
+        // 2) End must be at least half‐maze away
+        int maxM = (Width - 1) + (Height - 1);
+        int minDist = maxM / 2;
 
         var candidates = new List<GridCell>();
-        for (int ix = 0; ix < Width; ix++)
+        foreach (var c in AllCells)
         {
-            for (int iy = 0; iy < Height; iy++)
-            {
-                var c = AllCells[ix, iy];
-                if (c.IsBlocked || c == StartCell)
-                    continue;
-
-                int dist = Mathf.Abs(c.X - StartCell.X)
-                         + Mathf.Abs(c.Y - StartCell.Y);
-                if (dist >= minDistance)
-                    candidates.Add(c);
-            }
+            if (c == StartCell || c.IsBlocked) continue;
+            int d = Mathf.Abs(c.X - StartCell.X) + Mathf.Abs(c.Y - StartCell.Y);
+            if (d >= minDist)
+                candidates.Add(c);
         }
 
         if (candidates.Count > 0)
@@ -134,9 +152,9 @@ public class GridMap
         }
         else
         {
-            // fallback
+            // fallback (should only happen on very small maps)
             EndCell = StartCell;
-            Debug.LogWarning("No distant end found; using the start cell as end.");
+            Debug.LogWarning("No distant end found; using start cell as end.");
         }
     }
 }
