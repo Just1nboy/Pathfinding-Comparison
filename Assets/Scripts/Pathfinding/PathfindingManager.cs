@@ -16,8 +16,6 @@ public class PathfindingManager : MonoBehaviour
         greedy = new GreedyPathfinder();
         dijkstra = new DijkstraPathfinder();
     }
-
-    // Single-run methods
     public void RunAStar() => RunOnce(aStar);
     public void RunGreedy() => RunOnce(greedy);
     public void RunDijkstra() => RunOnce(dijkstra);
@@ -29,7 +27,6 @@ public class PathfindingManager : MonoBehaviour
         algo.FindPath(map.StartCell, map.EndCell, map.AllCells);
     }
 
-    // 100-run benchmarks per algo
     public async void RunAStarBenchmark() => await RunBenchmark(aStar, "astar_benchmark.csv");
     public async void RunGreedyBenchmark() => await RunBenchmark(greedy, "greedy_benchmark.csv");
     public async void RunDijkstraBenchmark() => await RunBenchmark(dijkstra, "dijkstra_benchmark.csv");
@@ -42,7 +39,7 @@ public class PathfindingManager : MonoBehaviour
         for (int i = 0; i < 100; i++)
         {
             gridView.GenerateMaze();
-            await Task.Delay(100); // allow maze to regenerate
+            await Task.Delay(100);
 
             var map = gridView.GetMap();
             var runner = new BenchmarkPathfinder(algo);
@@ -50,7 +47,6 @@ public class PathfindingManager : MonoBehaviour
             statsList.Add(stats);
         }
 
-        // Convert to CSV rows
         var rows = new List<string[]>();
         rows.Add(new[] { "Run", "TimeSeconds", "VisitedCells", "PathLength" });
         for (int i = 0; i < statsList.Count; i++)
@@ -69,7 +65,6 @@ public class PathfindingManager : MonoBehaviour
         Debug.Log($"Finished benchmark: {fileName}");
     }
 
-    // Combined 100-maze × 3-algo benchmark
     public async void RunFullBenchmark()
     {
         Debug.Log("Starting full benchmark (100 mazes × 3 algos)");
@@ -79,13 +74,11 @@ public class PathfindingManager : MonoBehaviour
 
         for (int i = 0; i < 100; i++)
         {
-            // 1) Generate a fresh maze
             gridView.GenerateMaze();
-            await Task.Delay(100); // wait for the grid to rebuild
+            await Task.Delay(100);
 
             var map = gridView.GetMap();
 
-            // 2) Run A*
             gridView.ResetVisuals();
             var aStats = await new BenchmarkPathfinder(new AStarPathfinder())
                                 .RunAsync(map.StartCell, map.EndCell, map.AllCells);
@@ -97,7 +90,6 @@ public class PathfindingManager : MonoBehaviour
             aStats.PathLength.ToString()
         });
 
-            // 3) Run Greedy
             gridView.ResetVisuals();
             var gStats = await new BenchmarkPathfinder(new GreedyPathfinder())
                                 .RunAsync(map.StartCell, map.EndCell, map.AllCells);
@@ -109,7 +101,6 @@ public class PathfindingManager : MonoBehaviour
             gStats.PathLength.ToString()
         });
 
-            // 4) Run Dijkstra
             gridView.ResetVisuals();
             var dStats = await new BenchmarkPathfinder(new DijkstraPathfinder())
                                 .RunAsync(map.StartCell, map.EndCell, map.AllCells);

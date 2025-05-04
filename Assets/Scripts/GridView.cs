@@ -21,10 +21,8 @@ public class GridView : MonoBehaviour
 
     public void GenerateMaze()
     {
-        // Cleanup old
         foreach (Transform t in transform) DestroyImmediate(t.gameObject);
 
-        // New map
         gridMap = new GridMap(mapWidth, mapHeight, blockRatio);
 
         for (int x = 0; x < gridMap.Width; x++)
@@ -47,13 +45,13 @@ public class GridView : MonoBehaviour
 
     public void ResetVisuals()
     {
-       foreach (var cell in gridMap.AllCells)
-      {
-          if (!cell.IsBlocked && !cell.IsStart && !cell.IsEnd)
-          {
-              cell.Visual.ShowBlocked(false);  // white
-          }
-       }
+        foreach (var cell in gridMap.AllCells)
+        {
+            if (!cell.IsBlocked && !cell.IsStart && !cell.IsEnd)
+            {
+                cell.Visual.ShowBlocked(false);  // white
+            }
+        }
     }
 
 

@@ -14,7 +14,6 @@ public class BenchmarkPathfinder
         var tcs = new System.Threading.Tasks.TaskCompletionSource<PathfindingStats>();
         PathfindingStats captured = null;
 
-        // Wraps algorithm to intercept stats
         if (algo is AStarPathfinder a)
             a.OnComplete = (s) => { captured = s; tcs.SetResult(s); };
         else if (algo is GreedyPathfinder g)
